@@ -54,63 +54,65 @@ public final class JavaVirtualMachine: @unchecked Sendable {
   ///     be prefixed by the class-path argument described above.
   ///   - ignoreUnrecognized: Whether the JVM should ignore any VM options it
   ///     does not recognize.
-  private init(
-    classpath: [String] = [],
-    vmOptions: [String] = [],
-    ignoreUnrecognized: Bool = false
-  ) throws {
-    self.classpath = classpath
-    var jvm: JavaVMPointer? = nil
-    var environment: UnsafeMutableRawPointer? = nil
-    var vmArgs = JavaVMInitArgs()
-    vmArgs.version = JavaVirtualMachine.jniVersion
-    vmArgs.ignoreUnrecognized = jboolean(ignoreUnrecognized ? JNI_TRUE : JNI_FALSE)
+  #if !canImport(Android)
+    private init(
+      classpath: [String] = [],
+      vmOptions: [String] = [],
+      ignoreUnrecognized: Bool = false
+    ) throws {
+      self.classpath = classpath
+      var jvm: JavaVMPointer? = nil
+      var environment: UnsafeMutablePointer<JNIEnv?>? = nil
+      var vmArgs = JavaVMInitArgs()
+      vmArgs.version = JavaVirtualMachine.jniVersion
+      vmArgs.ignoreUnrecognized = jboolean(ignoreUnrecognized ? JNI_TRUE : JNI_FALSE)
 
-    // Construct the complete list of VM options.
-    var allVMOptions: [String] = []
-    if !classpath.isEmpty {
-      let fileManager = FileManager.default
-      for path in classpath {
-        if !fileManager.fileExists(atPath: path) {
-          // FIXME: this should be configurable, a classpath missing a directory isn't reason to blow up
-          print("[warning][swift-java][JavaVirtualMachine] Missing classpath element: \(URL(fileURLWithPath: path).absoluteString)") // TODO: stderr
+      // Construct the complete list of VM options.
+      var allVMOptions: [String] = []
+      if !classpath.isEmpty {
+        let fileManager = FileManager.default
+        for path in classpath {
+          if !fileManager.fileExists(atPath: path) {
+            // FIXME: this should be configurable, a classpath missing a directory isn't reason to blow up
+            print("[warning][swift-java][JavaVirtualMachine] Missing classpath element: \(URL(fileURLWithPath: path).absoluteString)") // TODO: stderr
+          }
+        }
+        let colonSeparatedClassPath = classpath.joined(separator: ":")
+        allVMOptions.append("-Djava.class.path=\(colonSeparatedClassPath)")
+      }
+      allVMOptions.append(contentsOf: vmOptions)
+
+      // Convert the options
+      let optionsBuffer = UnsafeMutableBufferPointer<JavaVMOption>.allocate(capacity: allVMOptions.count)
+      defer {
+        optionsBuffer.deallocate()
+      }
+      for (index, vmOption) in allVMOptions.enumerated() {
+        let optionString = vmOption.utf8CString.withUnsafeBufferPointer { buffer in
+          let cString = UnsafeMutableBufferPointer<CChar>.allocate(capacity: buffer.count + 1)
+          _ = cString.initialize(from: buffer)
+          cString[buffer.count] = 0
+          return cString
+        }
+        optionsBuffer[index] = JavaVMOption(optionString: optionString.baseAddress, extraInfo: nil)
+      }
+      defer {
+        for option in optionsBuffer {
+          option.optionString.deallocate()
         }
       }
-      let colonSeparatedClassPath = classpath.joined(separator: ":")
-      allVMOptions.append("-Djava.class.path=\(colonSeparatedClassPath)")
-    }
-    allVMOptions.append(contentsOf: vmOptions)
+      vmArgs.options = optionsBuffer.baseAddress
+      vmArgs.nOptions = jint(optionsBuffer.count)
 
-    // Convert the options
-    let optionsBuffer = UnsafeMutableBufferPointer<JavaVMOption>.allocate(capacity: allVMOptions.count)
-    defer {
-      optionsBuffer.deallocate()
-    }
-    for (index, vmOption) in allVMOptions.enumerated() {
-      let optionString = vmOption.utf8CString.withUnsafeBufferPointer { buffer in
-        let cString = UnsafeMutableBufferPointer<CChar>.allocate(capacity: buffer.count + 1)
-        _ = cString.initialize(from: buffer)
-        cString[buffer.count] = 0
-        return cString
+      // Create the JVM instance.
+      if let createError = VMError(fromJNIError: JNI_CreateJavaVM(&jvm, &environment, &vmArgs)) {
+        throw createError
       }
-      optionsBuffer[index] = JavaVMOption(optionString: optionString.baseAddress, extraInfo: nil)
-    }
-    defer {
-      for option in optionsBuffer {
-        option.optionString.deallocate()
-      }
-    }
-    vmArgs.options = optionsBuffer.baseAddress
-    vmArgs.nOptions = jint(optionsBuffer.count)
 
-    // Create the JVM instance.
-    if let createError = VMError(fromJNIError: JNI_CreateJavaVM(&jvm, &environment, &vmArgs)) {
-      throw createError
+      self.jvm = jvm!
+      self.destroyOnDeinit = .init(initialState: true)
     }
-
-    self.jvm = jvm!
-    self.destroyOnDeinit = .init(initialState: true)
-  }
+  #endif
 
   public func destroyJVM() throws {
     try self.detachCurrentThread()
@@ -162,11 +164,12 @@ extension JavaVirtualMachine {
     }
 
     // Attach the current thread to the JVM.
+    var castedEnvironment = environment?.assumingMemoryBound(to: JNIEnv?.self)
     let attachResult: jint
     if asDaemon {
-      attachResult = jvm.pointee!.pointee.AttachCurrentThreadAsDaemon(jvm, &environment, nil)
+      attachResult = jvm.pointee!.pointee.AttachCurrentThreadAsDaemon(jvm, &castedEnvironment, nil)
     } else {
-      attachResult = jvm.pointee!.pointee.AttachCurrentThread(jvm, &environment, nil)
+      attachResult = jvm.pointee!.pointee.AttachCurrentThread(jvm, &castedEnvironment, nil)
     }
 
     // If we failed to attach, report that.
@@ -177,7 +180,7 @@ extension JavaVirtualMachine {
 
     JavaVirtualMachine.destroyTLS.set(environment!)
 
-    return environment!.assumingMemoryBound(to: JNIEnv?.self)
+    return castedEnvironment!
   }
 
   /// Detach the current thread from the Java Virtual Machine. All Java
@@ -237,46 +240,50 @@ extension JavaVirtualMachine {
         }
       }
 
-      while true {
-        var wasExistingVM: Bool = false
+      #if os(Android)
+        preconditionFailure("Cannot create new JVM instance on Android")
+      #else
         while true {
-          // Query the JVM itself to determine whether there is a JVM
-          // instance that we don't yet know about.
-          var jvm: UnsafeMutablePointer<JavaVM?>? = nil
-          var numJVMs: jsize = 0
-          if JNI_GetCreatedJavaVMs(&jvm, 1, &numJVMs) == JNI_OK, numJVMs >= 1 {
-            // Adopt this JVM into a new instance of the JavaVirtualMachine
-            // wrapper.
-            let javaVirtualMachine = JavaVirtualMachine(adoptingJVM: jvm!)
+          var wasExistingVM: Bool = false
+          while true {
+            // Query the JVM itself to determine whether there is a JVM
+            // instance that we don't yet know about.
+            var jvm: UnsafeMutablePointer<JavaVM?>? = nil
+            var numJVMs: jsize = 0
+            if JNI_GetCreatedJavaVMs(&jvm, 1, &numJVMs) == JNI_OK, numJVMs >= 1 {
+              // Adopt this JVM into a new instance of the JavaVirtualMachine
+              // wrapper.
+              let javaVirtualMachine = JavaVirtualMachine(adoptingJVM: jvm!)
+              sharedJVMPointer = javaVirtualMachine
+              return javaVirtualMachine
+            }
+
+            precondition(
+              !wasExistingVM,
+              "JVM reports that an instance of the JVM was already created, but we didn't see it."
+            )
+
+            // Create a new instance of the JVM.
+            let javaVirtualMachine: JavaVirtualMachine
+            do {
+              javaVirtualMachine = try JavaVirtualMachine(
+                classpath: classpath,
+                vmOptions: vmOptions,
+                ignoreUnrecognized: ignoreUnrecognized
+              )
+            } catch VMError.existingVM {
+              // We raced with code outside of this JavaVirtualMachine instance
+              // that created a VM while we were trying to do the same. Go
+              // through the loop again to pick up the underlying JVM pointer.
+              wasExistingVM = true
+              continue
+            }
+
             sharedJVMPointer = javaVirtualMachine
             return javaVirtualMachine
           }
-
-          precondition(
-            !wasExistingVM,
-            "JVM reports that an instance of the JVM was already created, but we didn't see it."
-          )
-
-          // Create a new instance of the JVM.
-          let javaVirtualMachine: JavaVirtualMachine
-          do {
-            javaVirtualMachine = try JavaVirtualMachine(
-              classpath: classpath,
-              vmOptions: vmOptions,
-              ignoreUnrecognized: ignoreUnrecognized
-            )
-          } catch VMError.existingVM {
-            // We raced with code outside of this JavaVirtualMachine instance
-            // that created a VM while we were trying to do the same. Go
-            // through the loop again to pick up the underlying JVM pointer.
-            wasExistingVM = true
-            continue
-          }
-
-          sharedJVMPointer = javaVirtualMachine
-          return javaVirtualMachine
         }
-      }
+      #endif
     }
   }
 

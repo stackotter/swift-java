@@ -71,16 +71,16 @@ func getJavaHomeFromLibexecJavaHome() -> String? {
     }
 }
 
-let javaHome = findJavaHome()
+// let javaHome = findJavaHome()
 
-let javaIncludePath = "\(javaHome)/include"
-#if os(Linux)
-  let javaPlatformIncludePath = "\(javaIncludePath)/linux"
-#elseif os(macOS)
-  let javaPlatformIncludePath = "\(javaIncludePath)/darwin"
-#elseif os(Windows)
-  let javaPlatformIncludePath = "\(javaIncludePath)/win32"
-#endif
+// let javaIncludePath = "\(javaHome)/include"
+// #if os(Linux)
+//   let javaPlatformIncludePath = "\(javaIncludePath)/linux"
+// #elseif os(macOS)
+//   let javaPlatformIncludePath = "\(javaIncludePath)/darwin"
+// #elseif os(Windows)
+//   let javaPlatformIncludePath = "\(javaIncludePath)/win32"
+// #endif
 
 let package = Package(
   name: "SwiftJava",
@@ -227,20 +227,20 @@ let package = Package(
       exclude: ["swift-java.config"],
       swiftSettings: [
         .swiftLanguageMode(.v5),
-        .unsafeFlags(["-I\(javaIncludePath)", "-I\(javaPlatformIncludePath)"])
+        // .unsafeFlags(["-I\(javaIncludePath)", "-I\(javaPlatformIncludePath)"])
       ],
       linkerSettings: [
         .unsafeFlags(
           [
-            "-L\(javaHome)/lib/server",
-            "-Xlinker", "-rpath",
-            "-Xlinker", "\(javaHome)/lib/server",
+            // "-L\(javaHome)/lib/server",
+            // "-Xlinker", "-rpath",
+            // "-Xlinker", "\(javaHome)/lib/server",
           ],
           .when(platforms: [.linux, .macOS])
         ),
         .unsafeFlags(
           [
-            "-L\(javaHome)/lib"
+            // "-L\(javaHome)/lib"
           ],
           .when(platforms: [.windows])),
         .linkedLibrary(
@@ -255,7 +255,7 @@ let package = Package(
       exclude: ["swift-java.config"],
       swiftSettings: [
         .swiftLanguageMode(.v5),
-        .unsafeFlags(["-I\(javaIncludePath)", "-I\(javaPlatformIncludePath)"])
+        // .unsafeFlags(["-I\(javaIncludePath)", "-I\(javaPlatformIncludePath)"])
       ]
     ),
     .target(
@@ -264,7 +264,7 @@ let package = Package(
       exclude: ["swift-java.config"],
       swiftSettings: [
         .swiftLanguageMode(.v5),
-        .unsafeFlags(["-I\(javaIncludePath)", "-I\(javaPlatformIncludePath)"])
+        // .unsafeFlags(["-I\(javaIncludePath)", "-I\(javaPlatformIncludePath)"])
       ]
     ),
     .target(
@@ -273,7 +273,7 @@ let package = Package(
       exclude: ["swift-java.config"],
       swiftSettings: [
         .swiftLanguageMode(.v5),
-        .unsafeFlags(["-I\(javaIncludePath)", "-I\(javaPlatformIncludePath)"])
+        // .unsafeFlags(["-I\(javaIncludePath)", "-I\(javaPlatformIncludePath)"])
       ]
     ),
     .target(
@@ -282,7 +282,7 @@ let package = Package(
       exclude: ["swift-java.config"],
       swiftSettings: [
         .swiftLanguageMode(.v5),
-        .unsafeFlags(["-I\(javaIncludePath)", "-I\(javaPlatformIncludePath)"])
+        // .unsafeFlags(["-I\(javaIncludePath)", "-I\(javaPlatformIncludePath)"])
       ]
     ),
     .target(
@@ -291,7 +291,7 @@ let package = Package(
       exclude: ["swift-java.config"],
       swiftSettings: [
         .swiftLanguageMode(.v5),
-        .unsafeFlags(["-I\(javaIncludePath)", "-I\(javaPlatformIncludePath)"])
+        // .unsafeFlags(["-I\(javaIncludePath)", "-I\(javaPlatformIncludePath)"])
       ]
     ),
     .target(
@@ -300,7 +300,7 @@ let package = Package(
       exclude: ["swift-java.config"],
       swiftSettings: [
         .swiftLanguageMode(.v5),
-        .unsafeFlags(["-I\(javaIncludePath)", "-I\(javaPlatformIncludePath)"])
+        // .unsafeFlags(["-I\(javaIncludePath)", "-I\(javaPlatformIncludePath)"])
       ]
     ),
 
@@ -322,7 +322,7 @@ let package = Package(
       dependencies: [],
       swiftSettings: [
         .swiftLanguageMode(.v5),
-        .unsafeFlags(["-I\(javaIncludePath)", "-I\(javaPlatformIncludePath)"])
+        // .unsafeFlags(["-I\(javaIncludePath)", "-I\(javaPlatformIncludePath)"])
       ]
     ),
     .target(
@@ -330,7 +330,7 @@ let package = Package(
       dependencies: [],
       swiftSettings: [
         .swiftLanguageMode(.v5),
-        .unsafeFlags(["-I\(javaIncludePath)", "-I\(javaPlatformIncludePath)"])
+        // .unsafeFlags(["-I\(javaIncludePath)", "-I\(javaPlatformIncludePath)"])
       ]
     ),
 
@@ -338,7 +338,7 @@ let package = Package(
       name: "JavaRuntime",
       swiftSettings: [
         .swiftLanguageMode(.v5),
-        .unsafeFlags(["-I\(javaIncludePath)", "-I\(javaPlatformIncludePath)"])
+        // .unsafeFlags(["-I\(javaIncludePath)", "-I\(javaPlatformIncludePath)"])
       ]
     ),
 
@@ -368,7 +368,7 @@ let package = Package(
       swiftSettings: [
         .swiftLanguageMode(.v5),
         .enableUpcomingFeature("BareSlashRegexLiterals"),
-        .unsafeFlags(["-I\(javaIncludePath)", "-I\(javaPlatformIncludePath)"]),
+        // .unsafeFlags(["-I\(javaIncludePath)", "-I\(javaPlatformIncludePath)"]),
       ]
     ),
 
@@ -390,7 +390,7 @@ let package = Package(
 
       swiftSettings: [
         .swiftLanguageMode(.v5),
-        .unsafeFlags(["-I\(javaIncludePath)", "-I\(javaPlatformIncludePath)"]),
+        // .unsafeFlags(["-I\(javaIncludePath)", "-I\(javaPlatformIncludePath)"]),
         .enableUpcomingFeature("BareSlashRegexLiterals"),
       ]
     ),
@@ -408,7 +408,7 @@ let package = Package(
       ],
       swiftSettings: [
         .swiftLanguageMode(.v5),
-        .unsafeFlags(["-I\(javaIncludePath)", "-I\(javaPlatformIncludePath)"]),
+        // .unsafeFlags(["-I\(javaIncludePath)", "-I\(javaPlatformIncludePath)"]),
       ]
     ),
 
@@ -435,7 +435,7 @@ let package = Package(
       dependencies: ["JavaKit", "JavaKitNetwork"],
       swiftSettings: [
         .swiftLanguageMode(.v5),
-        .unsafeFlags(["-I\(javaIncludePath)", "-I\(javaPlatformIncludePath)"])
+        // .unsafeFlags(["-I\(javaIncludePath)", "-I\(javaPlatformIncludePath)"])
       ]
     ),
 
@@ -463,7 +463,7 @@ let package = Package(
       dependencies: ["SwiftJavaLib"],
       swiftSettings: [
         .swiftLanguageMode(.v5),
-        .unsafeFlags(["-I\(javaIncludePath)", "-I\(javaPlatformIncludePath)"])
+        // .unsafeFlags(["-I\(javaIncludePath)", "-I\(javaPlatformIncludePath)"])
       ]
     ),
 
@@ -474,7 +474,7 @@ let package = Package(
       ],
       swiftSettings: [
         .swiftLanguageMode(.v5),
-        .unsafeFlags(["-I\(javaIncludePath)", "-I\(javaPlatformIncludePath)"])
+        // .unsafeFlags(["-I\(javaIncludePath)", "-I\(javaPlatformIncludePath)"])
       ]
     ),
     

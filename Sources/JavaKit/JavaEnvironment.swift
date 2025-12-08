@@ -15,5 +15,5 @@
 import JavaRuntime
 
 extension UnsafeMutablePointer<JNIEnv?> {
-  var interface: JNINativeInterface_ { self.pointee!.pointee }
+  var interface: JNINativeInterface { self.pointee!.pointee }
 }
