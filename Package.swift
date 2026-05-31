@@ -359,25 +359,28 @@ let package = Package(
         .enableUpcomingFeature("BareSlashRegexLiterals"),
       ],
       plugins: [
-        .plugin(name: "_StaticBuildConfigPlugin")
+        // .plugin(name: "_StaticBuildConfigPlugin")
       ]
     ),
 
-    .executableTarget(
-      name: "StaticBuildConfigPluginExecutable",
-      dependencies: [
-        .product(name: "Subprocess", package: "swift-subprocess"),
-        .product(name: "SwiftIfConfig", package: "swift-syntax"),
-      ]
-    ),
+    // .executableTarget(
+    //   name: "StaticBuildConfigPluginExecutable",
+    //   dependencies: [
+    //     .product(name: "Subprocess", package: "swift-subprocess"),
+    //     .product(name: "SwiftIfConfig", package: "swift-syntax"),
+    //   ]
+    // ),
 
-    .plugin(
-      name: "_StaticBuildConfigPlugin",
-      capability: .buildTool(),
-      dependencies: [
-        "StaticBuildConfigPluginExecutable"
-      ]
-    ),
+    // This plugin has been removed to work around swiftlang/swift-java#776;
+    // https://github.com/swiftlang/swift-java/issues/776
+    //
+    // .plugin(
+    //   name: "_StaticBuildConfigPlugin",
+    //   capability: .buildTool(),
+    //   dependencies: [
+    //     "StaticBuildConfigPluginExecutable"
+    //   ]
+    // ),
 
     .plugin(
       name: "JExtractSwiftPlugin",
